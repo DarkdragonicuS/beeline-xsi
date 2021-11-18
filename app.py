@@ -27,7 +27,8 @@ def parseEvent(data):
                 logFile.close()
             answerer = xmlBody['xsi:Event']['xsi:eventData']['xsi:call']['xsi:endpoint']['xsi:addressOfRecord'].split('@')[0]
             caller = xmlBody['xsi:Event']['xsi:eventData']['xsi:call']['xsi:remoteParty']['xsi:address']['#text'].split(':')[1]
-            sendToChat(caller,answerer)
+            if xmlBody['xsi:Event']['xsi:eventData']['xsi:call']['xsi:personality'] == 'Terminator':
+                sendToChat(caller,answerer)
     except Exception:
         with open(debugLogPath,'a') as logFile:
             logFile.write(xmltodict.unparse(xmlBody))
