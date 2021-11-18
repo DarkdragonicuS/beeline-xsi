@@ -1,8 +1,12 @@
 from flask import Flask,request
-import xmltodict
+import xmltodict,requests
 
-listenHost = '127.0.0.1'
+listenHost = '172.16.16.120'
 listenPort = 5000
+debugLogPath = 'c:\\obmen\\log.txt'
+telegramChatIds = []
+telegramToken = ''
+
 app = Flask(__name__)
 
 @app.route('/events/null', methods=['POST'])
@@ -16,12 +20,32 @@ def dosmth():
 
 def parseEvent(data):
     xmlBody = xmltodict.parse(data)
-    if xmlBody['xsi:Event']['xsi:eventData']['@xsi1:type'] == 'xsi:CallAnsweredEvent':
-        answerer = xmlBody['xsi:Event']['xsi:eventData']['xsi:call']['xsi:endpoint']['xsi:addressOfRecord'].split('@')[0]
-        caller = xmlBody['xsi:Event']['xsi:eventData']['xsi:call']['xsi:remoteParty']['xsi:address']['#text'].split(':')[1]
-        sendToChat(caller,answerer)
+    try:
+        if xmlBody['xsi:Event']['xsi:eventData']['@xsi1:type'] == 'xsi:CallAnsweredEvent':
+            with open(debugLogPath,'a') as logFile:
+                logFile.write(xmltodict.unparse(xmlBody))
+                logFile.close()
+            answerer = xmlBody['xsi:Event']['xsi:eventData']['xsi:call']['xsi:endpoint']['xsi:addressOfRecord'].split('@')[0]
+            caller = xmlBody['xsi:Event']['xsi:eventData']['xsi:call']['xsi:remoteParty']['xsi:address']['#text'].split(':')[1]
+            sendToChat(caller,answerer)
+    except Exception:
+        with open(debugLogPath,'a') as logFile:
+            logFile.write(xmltodict.unparse(xmlBody))
+            logFile.close()
+        pass
 
 def sendToChat(caller,answerer):
-    print('На звонок от ' + caller + ' ответил ' + answerer)
+    message = 'На звонок от ' + caller + ' ответил ' + answerer
+    print(message)
+    headers={
+        'Content-Type':'application/json',
+        'Accept':'application/json'
+    }
+    for chatId in telegramChatIds:
+        params = {
+            'chat_id':chatId,
+            'text':message
+        }
+        requests.post(url='https://api.telegram.org/bot'+telegramToken+'/sendMessage',params=params,headers=headers)
 
 app.run(host=listenHost, port=listenPort)
