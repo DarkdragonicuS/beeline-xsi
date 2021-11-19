@@ -26,7 +26,8 @@ def parseEvent(data):
     xmlBody = xmltodict.parse(data)
     try:
         with open(debugLogPath,'a') as logFile:
-                logFile.write(xmltodict.unparse(xmlBody))
+                logFile.write(xmltodict.unparse(xmlBody).replace('\n',''))
+                logFile.write('\n')
                 logFile.close()
         if xmlBody['xsi:Event']['xsi:eventData']['@xsi1:type'] == 'xsi:CallAnsweredEvent':
             answerer = xmlBody['xsi:Event']['xsi:eventData']['xsi:call']['xsi:endpoint']['xsi:addressOfRecord'].split('@')[0]
