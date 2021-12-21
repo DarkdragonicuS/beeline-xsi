@@ -69,15 +69,22 @@ def subscriptionUpdateJob():
     while True:
         sleep(60)
         for abonent in xsiSubscribes:
-            print('Checking subscription for abonent ' + abonent + '...',end='')
-            if not checkSubscription(xsiSubscribes[abonent]):
+            print(str(datetime.now()) + ' Checking subscription for abonent ' + abonent + '...',end='')
+            checkSubscriptionResult = checkSubscription(xsiSubscribes[abonent])
+            if not checkSubscriptionResult['status']:
                 print('done!')
+                print('Updating subscription...',end='')
+                xsiSubscribes[abonent] = subscribeToEvent(abonent)
+                print('done!')
+            elif(checkSubscriptionResult['expires'] <= 600):
+                print('done!')
+                print('Subscription is expiring (' + str(checkSubscriptionResult['expires']) + ').')
                 print('Updating subscription...',end='')
                 xsiSubscribes[abonent] = subscribeToEvent(abonent)
                 print('done!')
             else:
                 print('done!')
-                print('Subscription isn\'t expired.')
+                print('Subscription isn\'t expired (' + str(checkSubscriptionResult['expires']) + ').')
 
 def checkSubscription(subscriptionId):
     headers = {
@@ -88,10 +95,17 @@ def checkSubscription(subscriptionId):
         'subscriptionId':subscriptionId
     }
     response = requests.get(url='https://cloudpbx.beeline.ru/apis/portal/subscription',params=params,headers=headers)
-    if 'expires' in response.json():
-        return True
+    if response.status_code == 200:
+        if 'expires' in response.json():
+            return {
+                'status':True,
+                'expires':response.json()['expires']
+            }
     else:
-        return False
+        return {
+            'status':False,
+            'expires':0
+        }
 
 def subscribeToEvent(pattern):
     url = 'https://cloudpbx.beeline.ru/apis/portal/subscription'
@@ -106,7 +120,10 @@ def subscribeToEvent(pattern):
         'url':externalUrl
     }
     response = requests.put(url=url,headers=headers,data=json.dumps(params))
-    return response.json()['subscriptionId']
+    if response.status_code == 200:
+        return response.json()['subscriptionId']
+    else:
+        return '0'
 
 def serverRun():
     app.run(host=listenHost, port=listenPort)
